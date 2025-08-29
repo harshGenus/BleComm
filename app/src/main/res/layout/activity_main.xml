@@ -1,0 +1,130 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/mainLayout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FFFFFF"
+    android:orientation="vertical"
+    android:padding="16dp"
+    tools:context=".MainActivity">
+
+    <!-- BLE Device Name Input -->
+    <EditText
+        android:id="@+id/etBleName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="50dp"
+        android:hint="Enter BLE device name"
+        android:textSize="16sp"
+        android:padding="8dp"
+        android:text="GWUSWD10009995"
+        android:background="@android:drawable/edit_text"
+        android:layout_marginBottom="12dp"
+        android:textColor="#000000"
+        android:inputType="text" />
+
+    <!-- Connection Indicators -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:layout_marginBottom="12dp">
+
+        <!-- USB Status -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginEnd="32dp">
+
+            <View
+                android:id="@+id/usbStatusIndicator"
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:background="@drawable/status_circle_red" />
+
+            <TextView
+                android:id="@+id/tvUsbStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="USB: Disconnected"
+                android:textSize="14sp"
+                android:layout_marginStart="6dp"
+                android:textColor="#000000" />
+        </LinearLayout>
+
+        <!-- BLE Status -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <View
+                android:id="@+id/bleStatusIndicator"
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:background="@drawable/status_circle_red" />
+
+            <TextView
+                android:id="@+id/tvBleStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="BLE: Disconnected"
+                android:textSize="14sp"
+                android:layout_marginStart="6dp"
+                android:textColor="#000000" />
+        </LinearLayout>
+    </LinearLayout>
+
+
+
+    <!-- Action Buttons -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:layout_marginTop="16dp">
+
+        <Button
+            android:id="@+id/btnScanBle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Connect BLE" />
+
+        <Button
+            android:id="@+id/btnToggleConnect"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="Connect USB" />
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/btnSendData"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Send Data"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="8dp" />
+    <!-- Logs -->
+    <ScrollView
+        android:id="@+id/statusScrollView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginTop="16dp"
+        android:background="#EEEEEE"
+        android:padding="8dp">
+
+        <TextView
+            android:id="@+id/tvStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Status: Waiting..."
+            android:textSize="14sp"
+            android:textColor="@android:color/black" />
+    </ScrollView>
+</LinearLayout>
