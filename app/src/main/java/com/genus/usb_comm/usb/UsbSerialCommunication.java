@@ -1,10 +1,12 @@
 package com.genus.usb_comm.usb;
 
 import android.content.Context;
+import android.content.Intent;
 import android.util.Log;
 
 import com.ftdi.j2xx.D2xxManager;
 import com.ftdi.j2xx.FT_Device;
+import com.genus.usb_comm.MainActivity;
 
 public class UsbSerialCommunication {
 
@@ -22,8 +24,9 @@ public class UsbSerialCommunication {
     private final Object bufferLock = new Object();
     private byte[] readBuffer;
     public interface UsbReadCallback {
-        void onDataReceived(String data);
+        void onDataReceived(byte[] data);
     }
+
 
     private UsbReadCallback callback;
 
@@ -41,6 +44,15 @@ public class UsbSerialCommunication {
         } catch (D2xxManager.D2xxException e) {
             Log.e(TAG, "Unable to get D2xxManager instance", e);
         }
+    }
+    private void onUsbConnected() {
+        Intent intent = new Intent(MainActivity.ConnectionActions.ACTION_USB_CONNECTED);
+        context.sendBroadcast(intent);
+    }
+
+    private void onUsbDisconnected() {
+        Intent intent = new Intent(MainActivity.ConnectionActions.ACTION_USB_DISCONNECTED);
+        context.sendBroadcast(intent);
     }
 
     /** Connect to FTDI device at 9600 8N1 */
@@ -76,7 +88,7 @@ public class UsbSerialCommunication {
 
         isConnected = true;
         startReadThread();
-
+        onUsbConnected();
         Log.i(TAG, "Connected to FTDI device @9600 8N1");
         return true;
     }
@@ -85,11 +97,10 @@ public class UsbSerialCommunication {
     public void disconnect() {
         isConnected = false;
         stopReadThread();
-
         if (ftDevice != null && ftDevice.isOpen()) {
             ftDevice.close();
-            Log.i(TAG, "FTDI device disconnected");
         }
+        onUsbDisconnected();  // ✅ send broadcast
     }
 
     /** Write raw bytes */
@@ -101,10 +112,6 @@ public class UsbSerialCommunication {
         return false;
     }
 
-    /** Write string (ASCII) */
-    public boolean write(String msg) {
-        return write(msg.getBytes());
-    }
 
     /** Get last buffer read */
     public byte[] getBuffer() {
@@ -128,12 +135,11 @@ public class UsbSerialCommunication {
                                 readBuffer = buffer;
                             }
                             String hex  = bytesToHex(buffer).trim();
-                            String ascii = hexToAscii(hex);
                             Log.d(TAG, "Read " + read + " bytes: " + hex);
-                            Log.e("read Hex ",ascii);
                             if (callback != null) {
-                                callback.onDataReceived(ascii);
+                                callback.onDataReceived(buffer);
                             }
+
                         }
                     }
                     Thread.sleep(1000); // small delay
@@ -145,16 +151,6 @@ public class UsbSerialCommunication {
         readThread.start();
     }
 
-    public static String hexToAscii(String hexStr) {
-        StringBuilder output = new StringBuilder();
-        hexStr = hexStr.replaceAll(" ","");
-        for (int i = 0; i < hexStr.length(); i += 2) {
-            String str = hexStr.substring(i, i + 2);
-            output.append((char) Integer.parseInt(str, 16));
-        }
-
-        return output.toString();
-    }
     private void stopReadThread() {
         readThreadRunning = false;
         if (readThread != null) {

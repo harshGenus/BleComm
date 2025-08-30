@@ -17,7 +17,8 @@
         android:hint="Enter BLE device name"
         android:textSize="16sp"
         android:padding="8dp"
-        android:text="GWUSWD10009995"
+        android:text="GWU12345007"
+
         android:background="@android:drawable/edit_text"
         android:layout_marginBottom="12dp"
         android:textColor="#000000"
@@ -123,7 +124,7 @@
             android:id="@+id/tvStatus"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Status: Waiting..."
+            android:text="Status: Waiting...\n"
             android:textSize="14sp"
             android:textColor="@android:color/black" />
     </ScrollView>

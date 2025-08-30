@@ -7,7 +7,10 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.le.BluetoothLeScanner;
 import android.bluetooth.le.ScanCallback;
 import android.bluetooth.le.ScanResult;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.util.Log;
@@ -24,14 +27,20 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import com.genus.usb_comm.ble.BLECommunication;
+import com.genus.usb_comm.ble.BleComm;
 import com.genus.usb_comm.usb.UsbSerialCommunication;
 
+import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
     private static final int REQUEST_ENABLE_BT = 1;
+    Context context;
     private static final int REQUEST_PERMISSIONS_CODE = 1001;
 
     private static final String[] REQUIRED_PERMISSIONS = new String[]{
@@ -54,14 +63,52 @@ public class MainActivity extends AppCompatActivity {
     private boolean usbConnected = false;
     private boolean bleConnected = false;
     private BluetoothDevice connectedDevice;
+    private final BroadcastReceiver connectionReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            if (ConnectionActions.ACTION_USB_CONNECTED.equals(action)) {
+                usbConnected = true;
+                updateIndicator(usbStatusIndicator, tvUsbStatus, true, "USB: Connected");
+                appendLog("USB connected (via broadcast)");
+            } else if (ConnectionActions.ACTION_USB_DISCONNECTED.equals(action)) {
+                usbConnected = false;
+                updateIndicator(usbStatusIndicator, tvUsbStatus, false, "USB: Disconnected");
+                appendLog("USB disconnected (via broadcast)");
+            } else if (ConnectionActions.ACTION_BLE_CONNECTED.equals(action)) {
+                bleConnected = true;
+                updateIndicator(bleStatusIndicator, tvBleStatus, true, "BLE: Connected");
+                appendLog("BLE connected (via broadcast)");
+            } else if (ConnectionActions.ACTION_BLE_DISCONNECTED.equals(action)) {
+                bleConnected = false;
+                updateIndicator(bleStatusIndicator, tvBleStatus, false, "BLE: Disconnected");
+                appendLog("BLE disconnected (via broadcast)");
+            } else if (ConnectionActions.ACTION_BLE_DATA.equals(action)) {
+                byte[] data = intent.getByteArrayExtra("payload");
+                appendLog("BLE Data: " + Arrays.toString(data));
+            }
+
+        }
+    };
+
 
     // ---------------- Lifecycle ----------------
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        context = this;
+        SavedPreference.initPref(this);
 
         checkAndRequestPermissions();
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(ConnectionActions.ACTION_USB_CONNECTED);
+        filter.addAction(ConnectionActions.ACTION_USB_DISCONNECTED);
+        filter.addAction(ConnectionActions.ACTION_BLE_CONNECTED);
+        filter.addAction(ConnectionActions.ACTION_BLE_DATA);
+        filter.addAction(ConnectionActions.ACTION_BLE_DISCONNECTED);
+        registerReceiver(connectionReceiver, filter, RECEIVER_NOT_EXPORTED);
+
 
         tvStatus = findViewById(R.id.tvStatus);
         statusScrollView = findViewById(R.id.statusScrollView);
@@ -94,7 +141,6 @@ public class MainActivity extends AppCompatActivity {
                 disconnectUsb();
             }
         });
-
         btnSendData.setOnClickListener(v -> sendBleCommand());
 //        btnSendData.setOnClickListener(v -> sendUsbCommand());
     }
@@ -102,7 +148,7 @@ public class MainActivity extends AppCompatActivity {
     private void sendUsbCommand() {
         if (usbConnected) {
             String command = etBleName.getText().toString().trim();
-            usbComm.write(command);
+            usbComm.write(command.getBytes());
         }
     }
 
@@ -130,6 +176,7 @@ public class MainActivity extends AppCompatActivity {
                 BluetoothDevice device = result.getDevice();
                 if (device == null || device.getName() == null) return;
 
+
                 Log.e("Found BLE device: ", device.getName());
 
                 if (device.getName().equalsIgnoreCase(targetName)) {
@@ -138,6 +185,9 @@ public class MainActivity extends AppCompatActivity {
 
                     connectedDevice = device;
                     bleCommunication = new BLECommunication(MainActivity.this, connectedDevice);
+                    comm = new BleComm(connectedDevice, MainActivity.this);
+                    comm.ConnectBLE();
+                    bleCommunication.connect();
                     bleCommunication.setListener(new BLECommunication.BleListener() {
                         @Override
                         public void onConnected() {
@@ -170,21 +220,43 @@ public class MainActivity extends AppCompatActivity {
                         @Override
                         public void onDataReceived(byte[] data) {
                             appendLog("Data received: " + bytesToHex(data));
+                            if (usbComm != null) {
+                                usbComm.write(data);
+                            }
                         }
                     });
-                    bleCommunication.connect();
+
                 }
             }
         });
     }
 
+    @Override
+    protected void onStart() {
+        super.onStart();
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(ConnectionActions.ACTION_USB_CONNECTED);
+        filter.addAction(ConnectionActions.ACTION_USB_DISCONNECTED);
+        filter.addAction(ConnectionActions.ACTION_BLE_CONNECTED);
+        filter.addAction(ConnectionActions.ACTION_BLE_DATA);
+        filter.addAction(ConnectionActions.ACTION_BLE_DISCONNECTED);
+        registerReceiver(connectionReceiver, filter, RECEIVER_NOT_EXPORTED);
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        unregisterReceiver(connectionReceiver);
+    }
+
     private void sendBleCommand() {
         if (bleCommunication == null || !bleConnected) {
+            Log.e(TAG, "BLE not connected. Please scan and connect first." + bleCommunication + " bleConnected " + bleConnected);
             appendLog("BLE not connected. Please scan and connect first.");
             Toast.makeText(this, "BLE not connected", Toast.LENGTH_SHORT).show();
             return;
         }
-
+        // 43 4D 44 02 0E 00 00 00 64 00 D8 D2 0D 0A
         byte[] command = new byte[]{
                 0x43, 0x4D, 0x44, 0x02, 0x0E, 0x00, 0x00, 0x00,
                 0x64, 0x00, (byte) 0xD8, (byte) 0xD2, 0x0D, 0x0A
@@ -196,10 +268,12 @@ public class MainActivity extends AppCompatActivity {
         progressDialog.setCancelable(false);
         progressDialog.show();
 
-        Log.e("sending data",bytesToHex(command));
+        Log.e("sending data", bytesToHex(command));
         appendLog("Sending to BLE: " + bytesToHex(command));
+
+
         new Thread(() -> {
-            byte[] response = bleCommunication.dlmsWrite(command);
+            byte[] response = comm.DLMSWrite(command, 0, command.length);
 
             runOnUiThread(() -> {
                 progressDialog.dismiss();
@@ -212,11 +286,27 @@ public class MainActivity extends AppCompatActivity {
         }).start();
     }
 
-    // ---------------- USB ----------------
+    int count = 0;
+    BleComm comm;
+
+    public static class ConnectionActions {
+        public static final String ACTION_USB_CONNECTED = "com.genus.usb_comm.USB_CONNECTED";
+        public static final String ACTION_USB_DISCONNECTED = "com.genus.usb_comm.USB_DISCONNECTED";
+        public static final String ACTION_BLE_CONNECTED = "com.genus.usb_comm.BLE_CONNECTED";
+        public static final String ACTION_BLE_DATA = "com.genus.usb_comm.BLE_DATA";
+        public static final String ACTION_BLE_DISCONNECTED = "com.genus.usb_comm.BLE_DISCONNECTED";
+    }
+
     private void connectUsb() {
         boolean ok = usbComm.connect();
         if (ok) {
             usbConnected = true;
+            usbComm.setUsbReadCallback(data -> {
+                appendLog("USB → BLE: " + bytesToHex(data));
+                if (bleCommunication != null && bleConnected) {
+                    bleCommunication.write(data);
+                }
+            });
             btnToggleConnect.setText("Disconnect USB");
             updateIndicator(usbStatusIndicator, tvUsbStatus, true, "USB: Connected");
             appendLog("FTDI connected!");
@@ -233,20 +323,19 @@ public class MainActivity extends AppCompatActivity {
         appendLog("FTDI disconnected");
     }
 
-    private void sendUsbData(String msg) {
-        if (usbComm.write(msg)) {
-            appendLog("USB Sent: " + msg);
-        } else {
-            appendLog("USB Send failed");
-        }
-    }
 
     // ---------------- UI Helpers ----------------
+    private SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault());
+
     private void appendLog(String msg) {
         runOnUiThread(() -> {
-            tvStatus.append("\n" + msg);
-            statusScrollView.post(() -> statusScrollView.fullScroll(View.FOCUS_DOWN));
+            String currentTime = sdf.format(new Timestamp(System.currentTimeMillis()));
+            final String fullMessage = currentTime + " : " + msg + "\n";
+
+            tvStatus.append(fullMessage);
             Log.d(TAG, msg);
+
+            statusScrollView.post(() -> statusScrollView.fullScroll(View.FOCUS_DOWN));
         });
     }
 
@@ -290,6 +379,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        unregisterReceiver(connectionReceiver);
         if (usbComm != null) usbComm.disconnect();
         if (bleCommunication != null) bleCommunication.disconnect();
     }

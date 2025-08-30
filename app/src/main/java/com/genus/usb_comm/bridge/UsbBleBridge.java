@@ -60,9 +60,7 @@ public class UsbBleBridge {
                     byte[] data = new byte[read];
                     System.arraycopy(buffer, 0, data, 0, read);
                     String hex = bytesToHex(data);
-                    String ascii = new String(data, StandardCharsets.US_ASCII);
 
-                    log("USB → " + ascii + " [0x" + hex + "]");
 
                     if (bleTxChar != null) {
 //                        bleComm.DlmsWrite(bleTxChar, data);
