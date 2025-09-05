@@ -7,6 +7,7 @@ import android.util.Log;
 import com.ftdi.j2xx.D2xxManager;
 import com.ftdi.j2xx.FT_Device;
 import com.genus.usb_comm.MainActivity;
+import com.genus.usb_comm.SavedPreference;
 
 public class UsbSerialCommunication {
 
@@ -57,12 +58,24 @@ public class UsbSerialCommunication {
 
     /** Connect to FTDI device at 9600 8N1 */
     public boolean connect() {
+
+
         if (d2xxManager == null) {
             Log.e(TAG, "D2xxManager not initialized");
             return false;
         }
 
         int devCount = d2xxManager.createDeviceInfoList(context);
+        D2xxManager.FtDeviceInfoListNode[] deviceList = new D2xxManager.FtDeviceInfoListNode[devCount];
+        d2xxManager.getDeviceInfoList(devCount, deviceList);
+        for (int i = 0; i < devCount; i++) {
+            Log.i(TAG, "FTDI Device[" + i + "]: " +
+                    "Serial=" + deviceList[i].serialNumber +
+                    ", Description=" + deviceList[i].description +
+                    ", Type=" + deviceList[i].type +
+                    ", ID=" + deviceList[i].id +
+                    ", LocId=" + deviceList[i].location);
+        }
         if (devCount <= 0) {
             Log.e(TAG, "No FTDI device found");
             return false;
@@ -77,8 +90,17 @@ public class UsbSerialCommunication {
         // Reset into UART mode
         ftDevice.setBitMode((byte) 0, D2xxManager.FT_BITMODE_RESET);
 
-        // Configure port: 9600 baud, 8 data bits, 1 stop bit, no parity
-        ftDevice.setBaudRate(9600);
+        ftDevice.setBaudRate(SavedPreference.getBaudRate());
+        Log.e("saved baud rate",SavedPreference.getBaudRate()+"");
+
+        int baudRate = SavedPreference.getBaudRate();
+        if(baudRate<=0){
+            baudRate = 9600;
+            SavedPreference.setBaudRate(baudRate);
+        }
+        ftDevice.setBaudRate(baudRate);
+        Log.e("baud rate",baudRate+"");
+
         ftDevice.setDataCharacteristics(
                 D2xxManager.FT_DATA_BITS_8,
                 D2xxManager.FT_STOP_BITS_1,
@@ -89,18 +111,17 @@ public class UsbSerialCommunication {
         isConnected = true;
         startReadThread();
         onUsbConnected();
-        Log.i(TAG, "Connected to FTDI device @9600 8N1");
+        Log.i(TAG, "Connected to FTDI device @" + SavedPreference.getBaudRate() + " 8N1");
         return true;
     }
 
-    /** Disconnect and stop threads */
     public void disconnect() {
         isConnected = false;
         stopReadThread();
         if (ftDevice != null && ftDevice.isOpen()) {
             ftDevice.close();
         }
-        onUsbDisconnected();  // ✅ send broadcast
+        onUsbDisconnected();
     }
 
     /** Write raw bytes */
@@ -113,16 +134,15 @@ public class UsbSerialCommunication {
     }
 
 
-    /** Get last buffer read */
     public byte[] getBuffer() {
         synchronized (bufferLock) {
             return readBuffer;
         }
     }
 
-
     private void startReadThread() {
         readThreadRunning = true;
+        Log.e("readThread", "Started");
         readThread = new Thread(() -> {
             while (readThreadRunning && ftDevice != null && ftDevice.isOpen()) {
                 try {
@@ -142,7 +162,7 @@ public class UsbSerialCommunication {
 
                         }
                     }
-                    Thread.sleep(1000); // small delay
+                    Thread.sleep(100); // small delay
                 } catch (InterruptedException e) {
                     break;
                 }
@@ -160,7 +180,6 @@ public class UsbSerialCommunication {
         }
     }
 
-    /** Helper: convert bytes to HEX */
     private String bytesToHex(byte[] bytes) {
         StringBuilder sb = new StringBuilder();
         for (byte b : bytes) {

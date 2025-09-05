@@ -14,13 +14,12 @@ public class SavedPreference {
     }
 
     public static void ClearSPF() {
-
         editor.clear();
         editor.apply();
     }
 
     public static int getBaudRate() {
-        return spf.getInt("baudRate", 0);
+        return spf.getInt("baudRate", 9600);
     }
 
     public static void setBaudRate(int selected) {

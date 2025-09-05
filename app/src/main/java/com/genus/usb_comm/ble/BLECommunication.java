@@ -46,7 +46,7 @@ public class BLECommunication {
             UUID.fromString("00002902-0000-1000-8000-00805f9b34fb");
 
     private Context _context;
-    private BluetoothDevice _device;
+    public BluetoothDevice _device;
 
     private BluetoothGatt _gatt;
     public int _status = -1;
@@ -99,6 +99,56 @@ public class BLECommunication {
 //        if (listener != null) listener.onDisconnected();
     }
 
+    public BluetoothGattCharacteristic getWriteCharacteristic() {
+        return writeChar;
+    }
+
+    public void writeLarge(byte[] data) {
+        if (_gatt == null || writeChar == null) {
+            Log.w(TAG, "Not connected or writeChar not ready");
+            return;
+        }
+
+        final int mtu = SavedPreference.getMTU() > 0 ? SavedPreference.getMTU() - 3 : 20;
+        Log.d(TAG, "Sending data length=" + data.length + " with mtu=" + mtu);
+
+
+        int offset = 0;
+
+        while (offset < data.length) {
+            int chunkSize = Math.min(mtu, data.length - offset);
+            byte[] chunk = Arrays.copyOfRange(data, offset, offset + chunkSize);
+
+            writeChar.setValue(chunk);
+            writeChar.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT);
+            boolean success = _gatt.writeCharacteristic(writeChar);
+            Log.d(TAG, "Chunk (" + offset + " - " + (offset + chunkSize) + ") write result=" + success);
+
+            offset += chunkSize;
+
+            // ⚡️ Don’t sleep — rely on callback
+            waitForWriteAck();
+        }
+    }
+
+    // --- Synchronization object for sequential writes ---
+    private final Object writeLock = new Object();
+    private boolean writeAck = false;
+
+    private void waitForWriteAck() {
+        synchronized (writeLock) {
+            while (!writeAck) {
+                try {
+                    writeLock.wait();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                    return;
+                }
+            }
+            writeAck = false; // reset for next chunk
+        }
+    }
+
     // --- Write method ---
     public boolean write(byte[] buffer) {
         if (_gatt == null || writeChar == null) {
@@ -106,7 +156,7 @@ public class BLECommunication {
             return false;
         }
         Log.d(TAG, "BLE SEND: " + bytesToHex(buffer));
-
+//         DlmsWrite(char,buffer)
         writeChar.setValue(buffer);
         writeChar.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT);
         boolean result = false;
@@ -115,7 +165,7 @@ public class BLECommunication {
 
         }
         try {
-            Thread.sleep(1500L);
+            Thread.sleep(2500L);
         } catch (InterruptedException e) {
             //  throw new RuntimeException(e);
         }
@@ -287,24 +337,6 @@ public class BLECommunication {
                 _discoveredServices.btServices = gatt.getServices();
                 _discoveredServices.gatt = gatt;
 
-                for (BluetoothGattService service : gatt.getServices()) {
-                    Log.i(TAG, "Service: " + service.getUuid());
-                    for (BluetoothGattCharacteristic ch : service.getCharacteristics()) {
-                        int props = ch.getProperties();
-                        StringBuilder sb = new StringBuilder();
-                        if ((props & BluetoothGattCharacteristic.PROPERTY_READ) > 0)
-                            sb.append(" READ");
-                        if ((props & BluetoothGattCharacteristic.PROPERTY_WRITE) > 0)
-                            sb.append(" WRITE");
-                        if ((props & BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE) > 0)
-                            sb.append(" WRITE_NO_RESP");
-                        if ((props & BluetoothGattCharacteristic.PROPERTY_NOTIFY) > 0)
-                            sb.append(" NOTIFY");
-                        if ((props & BluetoothGattCharacteristic.PROPERTY_INDICATE) > 0)
-                            sb.append(" INDICATE");
-                        Log.i(TAG, "  Char: " + ch.getUuid() + " Props:" + sb);
-                    }
-                }
 
                 BluetoothGattService customService = gatt.getService(SERVICE_UUID);
                 if (customService == null) {
@@ -328,15 +360,6 @@ public class BLECommunication {
                 }
 
                 if (listener != null) listener.onWriteReady();
-//                // (Optional) read serial number as you had before
-//                BluetoothGattService disService = gatt.getService(DEVICE_INFORMATION_SERVICE_UUID);
-//                if (disService != null) {
-//                    BluetoothGattCharacteristic serialChar = disService.getCharacteristic(SERIAL_NUMBER_UUID);
-//                    if (serialChar != null) {
-//                        gatt.readCharacteristic(serialChar);
-//                    }
-//                }
-//                if (listener != null) listener.onWriteReady();
             }
         }
 
@@ -359,6 +382,10 @@ public class BLECommunication {
                 Log.i(TAG, "Write successful: " + bytesToHex(characteristic.getValue()));
             } else {
                 Log.e(TAG, "Write failed with status: " + status);
+            }
+            synchronized (writeLock) {
+                writeAck = true;
+                writeLock.notifyAll();
             }
         }
 

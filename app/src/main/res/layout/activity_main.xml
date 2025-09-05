@@ -14,31 +14,31 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="50dp"
+        android:layout_marginBottom="12dp"
+        android:background="@android:drawable/edit_text"
         android:hint="Enter BLE device name"
-        android:textSize="16sp"
+        android:inputType="text"
+
         android:padding="8dp"
         android:text="GWU12345007"
-
-        android:background="@android:drawable/edit_text"
-        android:layout_marginBottom="12dp"
         android:textColor="#000000"
-        android:inputType="text" />
+        android:textSize="16sp" />
 
     <!-- Connection Indicators -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
+        android:layout_marginBottom="12dp"
         android:gravity="center"
-        android:layout_marginBottom="12dp">
+        android:orientation="horizontal">
 
         <!-- USB Status -->
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
+            android:layout_marginEnd="32dp"
             android:gravity="center_vertical"
-            android:layout_marginEnd="32dp">
+            android:orientation="horizontal">
 
             <View
                 android:id="@+id/usbStatusIndicator"
@@ -50,18 +50,17 @@
                 android:id="@+id/tvUsbStatus"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="USB: Disconnected"
-                android:textSize="14sp"
                 android:layout_marginStart="6dp"
-                android:textColor="#000000" />
+                android:text="USB: Disconnected"
+                android:textColor="#000000"
+                android:textSize="14sp" />
         </LinearLayout>
 
-        <!-- BLE Status -->
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
             <View
                 android:id="@+id/bleStatusIndicator"
@@ -73,59 +72,113 @@
                 android:id="@+id/tvBleStatus"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="BLE: Disconnected"
-                android:textSize="14sp"
                 android:layout_marginStart="6dp"
-                android:textColor="#000000" />
+                android:text="BLE: Disconnected"
+                android:textColor="#000000"
+                android:textSize="14sp" />
         </LinearLayout>
     </LinearLayout>
 
-
-
-    <!-- Action Buttons -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
+        android:layout_marginTop="16dp"
         android:gravity="center"
-        android:layout_marginTop="16dp">
-
-        <Button
-            android:id="@+id/btnScanBle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Connect BLE" />
+        android:orientation="horizontal">
 
         <Button
             android:id="@+id/btnToggleConnect"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
+
             android:text="Connect USB" />
+
+        <Button
+            android:id="@+id/btnScanBle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="Connect BLE" />
+
+        <Button
+            android:id="@+id/refreshScreen"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="Refresh" />
+
+
     </LinearLayout>
 
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:gravity="center"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:layout_marginEnd="20dp"
+            android:text="Baud Rate:"
+            android:textColor="#000000"
+            android:textSize="14sp" />
+
+        <androidx.appcompat.widget.LinearLayoutCompat
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/border"
+            android:orientation="horizontal">
+
+            <Spinner
+                android:id="@+id/spBaudRate"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:layout_marginStart="10dp"
+                android:entries="@array/baudrates"
+                android:spinnerMode="dropdown"
+                android:theme="@style/Theme.MaterialComponents.Light" />
+        </androidx.appcompat.widget.LinearLayoutCompat>
+
+    </LinearLayout>
+
+    <!-- Logs -->
     <Button
         android:id="@+id/btnSendData"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Send Data"
         android:layout_gravity="center_horizontal"
-        android:layout_marginTop="8dp" />
-    <!-- Logs -->
-    <ScrollView
-        android:id="@+id/statusScrollView"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_marginTop="16dp"
-        android:background="#EEEEEE"
-        android:padding="8dp">
+        android:layout_marginTop="8dp"
+        android:text="Send Data"
+        android:visibility="gone" />
 
-        <TextView
-            android:id="@+id/tvStatus"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Status: Waiting...\n"
-            android:textSize="14sp"
-            android:textColor="@android:color/black" />
-    </ScrollView>
+    <!--    <ScrollView-->
+    <!--        android:id="@+id/statusScrollView"-->
+    <!--        android:layout_width="match_parent"-->
+    <!--        android:layout_height="match_parent"-->
+    <!--        android:layout_marginTop="16dp"-->
+    <!--        android:background="#EEEEEE"-->
+    <!--        android:padding="8dp">-->
+
+    <!--        <TextView-->
+    <!--            android:id="@+id/tvStatus"-->
+    <!--            android:layout_width="match_parent"-->
+    <!--            android:layout_height="wrap_content"-->
+    <!--            android:text="Status: Waiting...\n"-->
+    <!--            android:textColor="@android:color/black"-->
+    <!--            android:textSize="14sp" />-->
+    <!--    </ScrollView>-->
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvLogs"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="16dp"
+        android:layout_weight="1"
+        android:background="#EEEEEE"
+        android:padding="8dp" />
+
 </LinearLayout>

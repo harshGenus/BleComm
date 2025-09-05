@@ -1,11 +1,13 @@
 package com.genus.usb_comm.bridge;
 
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
 import android.os.IBinder;
 import android.util.Log;
 
 import com.genus.usb_comm.ble.BLECommunication;
+import com.genus.usb_comm.ble.BleComm;
 import com.genus.usb_comm.usb.UsbComm;
 // OR if you’re using FTDI driver instead:
 // import com.genus.usb_comm.usb.UsbSerialCommunication;
@@ -19,10 +21,12 @@ public class SocketBackgroundService extends Service {
     private ExecutorService executor;
     private UsbComm usbComm;
     private BLECommunication bleCommunication;
+    private Context context;
 
     @Override
     public void onCreate() {
         super.onCreate();
+        context = this;
         executor = Executors.newFixedThreadPool(2);
         Log.i(TAG, "Service created");
     }
@@ -55,8 +59,8 @@ public class SocketBackgroundService extends Service {
                     byte[] data = new byte[len];
                     System.arraycopy(buffer, 0, data, 0, len);
 
-                    boolean success = bleCommunication.write(data);
-                    Log.d(TAG, "USB → BLE (" + success + "): " + bytesToHex(data));
+                     bleCommunication.DlmsWrite(bleCommunication.getWriteCharacteristic(),data);
+                    Log.d(TAG, "USB → BLE (): " + bytesToHex(data));
                 }
             }
         });
@@ -83,7 +87,7 @@ public class SocketBackgroundService extends Service {
 
     @Override
     public IBinder onBind(Intent intent) {
-        return null; // Not bound
+        return null;
     }
 
     private String bytesToHex(byte[] bytes) {

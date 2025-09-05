@@ -15,7 +15,7 @@ public class BleComm {
     private static final UUID SIMPLE_SERVICE = UUID.fromString("f000c0e0-0451-4000-b000-000000000000");
     private static final UUID SIMPLE3_DATA = UUID.fromString("f000c0e1-0451-4000-b000-000000000000");
     private BluetoothDevice _device;
-    private BluetoothGattCharacteristic characteristic;
+    public BluetoothGattCharacteristic characteristic;
     private BluetoothGatt mConnectedGatt;
     public Context _context;
     private BLECommunication _bleComm;
